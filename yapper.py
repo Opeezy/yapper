@@ -13,7 +13,8 @@ from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
 from datetime import datetime
 from logging import Logger
-from register  import RegisterModal
+from modals  import RegisterModal, YapModal
+from sqlite3 import Cursor
 
 
 load_dotenv()
@@ -37,8 +38,7 @@ class Yapper(discord.Client):
         self.add_commands()
         self.logger.debug("Commands added")
 
-        self.db_connect()
-        self.logger.debug("Database connected")  
+        self.check_db()
 
     async def on_ready(self):
        self.logger.info(f'{self.user} has connected to Discord!') 
@@ -51,8 +51,9 @@ class Yapper(discord.Client):
     def add_commands(self) -> None:
         @self.tree.command(name='yap')
         async def yap(interaction: discord.Interaction):
-            self.cursor.execute(f'SELECT UserName, APIKey FROM users WHERE id = {interaction.user.id}')
-            user_info = self.cursor.fetchone()
+            cursor = self.get_cursor()
+            cursor.execute(f'SELECT * FROM users WHERE id = {interaction.user.id}')
+            user_info  = cursor.fetchone()
             self.logger.debug(f'User info fetched: {user_info}')
 
             if user_info is None:
@@ -65,8 +66,13 @@ class Yapper(discord.Client):
         
         @self.tree.command(name='register', description='Register with ElevenLabs')
         async def register(interaction: discord.Interaction):
-            register_modal = RegisterModal(self.cursor)
-            await interaction.response.send_modal(register_modal)
+            cursor = self.get_cursor()
+            cursor.execute(f'SELECT * FROM users WHERE id = {interaction.user.id}')
+            if cursor.fetchone() is not None:
+                await interaction.response.send_message("You have already registered!")
+            else:
+                register_modal = RegisterModal()
+                await interaction.response.send_modal(register_modal)
             
 
     def init_logger(self) -> None:
@@ -99,14 +105,26 @@ class Yapper(discord.Client):
 
         self.logger = logger
 
-    def db_connect(self) -> None:
-        if os.path.exists("yapper.db") == False:            
-            self.db = sqlite3.connect('yapper.db')  
-            self.cursor = self.db.cursor()      
-            self.cursor.execute('CREATE TABLE users (id INTEGER PRIMARY KEY, UserName TEXT, APIKey TEXT)')
+    def check_db(self) -> None:
+        if os.path.exists("yapper.db") == False:  
+            self.logger.debug("Database not found. Creating new database")          
+            db = sqlite3.connect('yapper.db')  
+            cursor = db.cursor()      
+            cursor.execute(
+                '''CREATE TABLE users(
+                    id INTEGER PRIMARY KEY NOT NULL UNIQUE,
+                    UserName TEXT NOT NULL,
+                    APIKey TEXT NOT NULL UNIQUE
+                );'''
+            )   
         else:
-            self.db = sqlite3.connect('yapper.db')  
-            self.cursor = self.db.cursor()
+            self.logger.debug("Database found.")         
+        
+    def get_cursor(self) -> Cursor:        
+        db = sqlite3.connect('yapper.db')  
+        cursor = db.cursor()
+        
+        return cursor
 
 
 if  __name__ == '__main__':
