@@ -1,6 +1,6 @@
 .venv/
 logs/
-__pychache__/
+__pycache__/
 
 .env
 yapper.db
