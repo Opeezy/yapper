@@ -43,6 +43,16 @@ class YapModal(discord.ui.Modal, title="Yapper"):
         super().__init__()
 
 
+    options = [
+        discord.SelectOption(label="Rachel", value="Rachel"),
+        discord.SelectOption(label="Adam", value="Adam"),
+        discord.SelectOption(label="Alice", value="Alice"),
+    ]
+    voice = discord.ui.Select(
+        options=options,
+        max_values=3
+    )
+
     text = discord.ui.TextInput(
         label="Your text",
         placeholder="Input your prompt here",
