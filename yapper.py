@@ -5,7 +5,9 @@ import uuid
 import sys
 import sqlite3
 
+from discord import Client
 from discord.ext import commands
+from discord.ext.commands import Context, Bot
 from discord import app_commands
 from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
@@ -21,9 +23,10 @@ __version__ = "0.1.0"
 # Constants
 TOKEN = os.getenv('DISCORD_TOKEN')
 
-class Yapper(commands.Bot):
-    def __init__(self, prefix, intents):
-        super().__init__(command_prefix='>', intents=intents)
+class Yapper(discord.Client):
+    def __init__(self, intents):
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
         self.logger = None
         self.db = None
         self.cursor = None
@@ -38,29 +41,32 @@ class Yapper(commands.Bot):
         self.logger.debug("Database connected")  
 
     async def on_ready(self):
+       self.logger.info(f'{self.user} has connected to Discord!') 
+
+    async def setup_hook(self):
         async for guild in self.fetch_guilds():
-            print(guild.name)
-        self.logger.info(f'{self.user} has connected to Discord!') 
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
 
     def add_commands(self) -> None:
-        @self.command(name='yap', pass_context=True)
-        async def yap(ctx):
-            self.cursor.execute(f'SELECT UserName, APIKey FROM users WHERE id = {ctx.author.id}')
+        @self.tree.command(name='yap')
+        async def yap(interaction: discord.Interaction):
+            self.cursor.execute(f'SELECT UserName, APIKey FROM users WHERE id = {interaction.user.id}')
             user_info = self.cursor.fetchone()
             self.logger.debug(f'User info fetched: {user_info}')
 
             if user_info is None:
-                await ctx.channel.send("User not found. Please register using `>register`")
+                await interaction.channel.send("User not found. Please register using `>register`")
             else:
                 username = user_info[0]
                 api_key = user_info[1]
                 self.logger.debug(f"User {username} requested API key: {api_key}")
-                await ctx.channel.send("Yap!")
+                await interaction.channel.send("Yap!")
         
-        @self.command(name='register', pass_context=True)
-        async def register(ctx):
-            register_modal = RegisterModal()
-            await ctx.interaction.response.send_modal(register_modal)
+        @self.tree.command(name='register', description='Register with ElevenLabs')
+        async def register(interaction: discord.Interaction):
+            register_modal = RegisterModal(self.cursor)
+            await interaction.response.send_modal(register_modal)
             
 
     def init_logger(self) -> None:
@@ -108,7 +114,6 @@ if  __name__ == '__main__':
     intents.message_content = True
 
     client = Yapper(
-        prefix='>',
         intents=intents
     )
 

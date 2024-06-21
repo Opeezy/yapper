@@ -1,25 +1,26 @@
 import discord
+import sqlite3
+
 from discord import app_commands
+from discord import Interaction
 
-class RegisterModal(discord.ui.Modal):
-    def __init__(self):
-        super().__init__(title="Register")
+class RegisterModal(discord.ui.Modal, title="Register"):
+    def __init__(self, cursor: sqlite3.Cursor):
+        self.cursor = cursor
 
-        self.user_name = discord.ui.TextInput(
-            label="Username",
-            placeholder="Enter your username"
-        )
+    api_key = discord.ui.TextInput(
+        label="API Key",
+        placeholder="Enter your API key"
+    )      
 
-        self.api_key = discord.ui.TextInput(
-            label="API Key",
-            placeholder="Enter your API key"
-        )      
+    async def on_submit(self, interaction: Interaction):
+        id = interaction.user.id
+        user_name = interaction.user.name
+        api_key = self.api_key.value
 
-        async def on_submit(self, interaction: discord.Interaction):
-            await interaction.response.send_message("You have registered successfully!")
-            self.stop()
+        self.cursor.execute(f"INSERT INTO users (id, UserName, APIKey) VALUES ({id}, {user_name}, {api_key})")
+        await interaction.response.send_message("You have registered successfully!")
 
-        async def on_error(self, interaction: discord.Interaction, exception: Exception):
-            await interaction.response.send_message("An error occurred: {exception}")
-            self.stop()
+    async def on_error(self, interaction: discord.Interaction, exception: Exception):
+        await interaction.response.send_message("An error occurred: {exception}")
     
