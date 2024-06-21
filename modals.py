@@ -44,13 +44,15 @@ class YapModal(discord.ui.Modal, title="Yapper"):
 
 
     options = [
-        discord.SelectOption(label="Rachel", value="Rachel"),
-        discord.SelectOption(label="Adam", value="Adam"),
-        discord.SelectOption(label="Alice", value="Alice"),
+        discord.SelectOption(label="Rachel"),
+        discord.SelectOption(label="Adam", default=True),
+        discord.SelectOption(label="Alice")
     ]
-    voice = discord.ui.Select(
+    voice = discord.SelectMenu(
         options=options,
-        max_values=3
+        min_values=3,
+        max_values=3,
+        disabled=False
     )
 
     text = discord.ui.TextInput(
