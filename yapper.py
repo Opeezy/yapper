@@ -5,10 +5,11 @@ import uuid
 import sys
 import sqlite3
 
-from discord import Client
+from discord import Client, User
 from discord.ext import commands
 from discord.ext.commands import Context, Bot
 from discord import app_commands
+from elevenlabs import save
 from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
 from datetime import datetime
@@ -39,6 +40,7 @@ class Yapper(discord.Client):
         self.logger.debug("Commands added")
 
         self.check_db()
+        self.check_audio_dir()
 
     async def on_ready(self):
        self.logger.info(f'{self.user} has connected to Discord!') 
@@ -49,7 +51,7 @@ class Yapper(discord.Client):
             await self.tree.sync(guild=guild)
 
     def add_commands(self) -> None:
-        @self.tree.command(name='yap')
+        @self.tree.command(name='yap', description='Generate text using ElevenLabs API')
         async def yap(interaction: discord.Interaction):
             cursor = self.get_cursor()
             cursor.execute(f'SELECT * FROM users WHERE id = {interaction.user.id}')
@@ -57,15 +59,33 @@ class Yapper(discord.Client):
             self.logger.debug(f'User info fetched: {user_info}')
 
             if user_info is None:
-                await interaction.channel.send("User not found. Please register using `>register`")
+                await interaction.response.send_message("User not found. Please register using `>register`", ephemeral=True)
             else:
-                username = user_info[0]
-                api_key = user_info[1]
+                username = user_info[1]
+                api_key = user_info[2]
                 self.logger.debug(f"User {username} requested API key: {api_key}")
-                await interaction.channel.send("Yap!")
+                
+                yap_modal = YapModal()
+                
+                await interaction.response.send_modal(yap_modal)
+                await yap_modal.wait()
+
+                audio_generated = self.generate_audio(yap_modal.text.value, api_key)
+                if audio_generated:
+                    voice_state = interaction.user.voice
+                    if voice_state is not None:
+                        self.logger.debug(f"User {username} is in a voice channel: {voice_state}")
+                        await voice_state.channel.connect() 
+                    else:
+                        self.logger.debug(f"User {username} is not in a voice channel")
+                        await interaction.followup.send("You need to be in a voice channel to use this command", ephemeral=True)
+    
+                else:
+                    self.logger.debug(f"Audio not generated for user {username}")
+
         
         @self.tree.command(name='register', description='Register with ElevenLabs')
-        async def register(interaction: discord.Interaction):
+        async def register(interaction: discord.Interaction, epehemeral: bool = True):
             cursor = self.get_cursor()
             cursor.execute(f'SELECT * FROM users WHERE id = {interaction.user.id}')
             if cursor.fetchone() is not None:
@@ -125,7 +145,30 @@ class Yapper(discord.Client):
         cursor = db.cursor()
         
         return cursor
+    
+    def check_audio_dir(self):
+        if os.path.exists('audio') == False:
+            self.logger.debug("Audio directory not found. Creating new directory")
+            os.mkdir('audio')
+    
+    def generate_audio(self, prompt: str, api_key: str) -> bool:
+        audio_id = uuid.uuid4().hex
+        client = ElevenLabs(api_key=api_key)
+        audio = client.generate(
+            text=prompt,
+            voice="Rachel",
+            model="eleven_multilingual_v2"
+        )
 
+        audio_file = os.path.join('audio', f'{audio_id}.mp3')
+        save(audio, audio_file)
+
+        if os.path.exists(audio_file):
+            self.logger.debug(f"Audio file generated: {audio_file}")
+            return True
+        else:
+            self.logger.debug(f"Audio file not generated: {audio_file}")
+            return False
 
 if  __name__ == '__main__':
     intents = discord.Intents.default()

@@ -7,6 +7,7 @@ from discord import app_commands
 from discord import Interaction
 
 
+
 class RegisterModal(discord.ui.Modal, title="Register"):    
 
     api_key = discord.ui.TextInput(
@@ -30,25 +31,30 @@ class RegisterModal(discord.ui.Modal, title="Register"):
             cursor.execute("INSERT INTO users VALUES (?, ?, ?)", params)
             db.commit()    
             
-            await interaction.response.send_message("You have registered successfully!")
+            await interaction.response.send_message("You have registered successfully!", ephemeral=True)
 
     async def on_error(self, interaction: discord.Interaction, exception: Exception):
         print(traceback.format_exc())
-        await interaction.response.send_message(f"A problem occured registering.")
+        await interaction.response.send_message(f"A problem occured registering.", ephemeral=True)
 
-class YapModal(discord.ui.Modal, title="Yapper"):    
+
+class YapModal(discord.ui.Modal, title="Yapper"): 
+    def __init__(self):
+        super().__init__()
+
 
     text = discord.ui.TextInput(
         label="Your text",
-        placeholder="Input your prompt here"
+        placeholder="Input your prompt here",
+        style=discord.TextStyle.paragraph
     )      
 
-    async def on_submit(self, interaction: Interaction):            
-        await interaction.response.send_message("Sending...")
+    async def on_submit(self, interaction: Interaction):
+            await interaction.response.send_message("Sending your prompt...", ephemeral=True)
 
     async def on_error(self, interaction: discord.Interaction, exception: Exception):
         print(traceback.format_exc())
-        await interaction.response.send_message(f"A problem occured sending your prompt.")
+        await interaction.response.send_message(f"A problem occured sending your prompt.", ephemeral=True)
     
 
     
