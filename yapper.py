@@ -75,7 +75,8 @@ class Yapper(discord.Client):
                     voice_state = interaction.user.voice
                     if voice_state is not None:
                         self.logger.debug(f"User {username} is in a voice channel: {voice_state}")
-                        await voice_state.channel.connect() 
+                        await voice_state.channel.connect()
+                        self.logger.debug(client.voice_clients)
                     else:
                         self.logger.debug(f"User {username} is not in a voice channel")
                         await interaction.followup.send("You need to be in a voice channel to use this command", ephemeral=True)
