@@ -27,7 +27,7 @@ __version__ = "0.1.0"
 
 # Constants
 TOKEN = os.getenv('DISCORD_TOKEN')
-FFMPEG = os.path.join(os.getcwd(), "bin\\ffmpeg.exe")
+FFMPEG = os.path.join(os.getcwd(), "ffmpeg\\ffmpeg.exe")
 
 class Yapper(discord.Client):
     def __init__(self, intents):
