@@ -10,7 +10,7 @@ from discord import Client, User
 from discord.ext import commands
 from discord.ext.commands import Context, Bot
 from discord import app_commands
-from elevenlabs import save, GetVoicesResponse
+from elevenlabs import save, GetVoicesResponse, VoiceSettings, Voice
 from elevenlabs.client import ElevenLabs
 from dotenv import load_dotenv
 from datetime import datetime
@@ -105,8 +105,19 @@ class Yapper(discord.Client):
                     await interaction.response.send_modal(yap_modal)
                     await yap_modal.wait()
 
+                    prompt = yap_modal.text.value
+                    voice_id = yap_modal.voice.value
+                    similarity = float(yap_modal.similarity.value)
+                    stability = float(yap_modal.stability.value)
+
                     # Validate if mp3 file was generated
-                    audio_file, audio_generated = self.generate_audio(yap_modal.text.value, yap_modal.voice.value, api_key)
+                    audio_file, audio_generated = self.generate_audio(
+                                                    prompt=prompt,
+                                                    voice_id=voice_id,
+                                                    stability=stability,
+                                                    similarity=similarity,
+                                                    api_key=api_key
+                                                )
                     if audio_generated:
                         # If so, check if user is in a voice channel
                         voice_state = interaction.user.voice
@@ -140,6 +151,21 @@ class Yapper(discord.Client):
             else:
                 register_modal = RegisterModal()
                 await interaction.response.send_modal(register_modal)
+                
+        @self.tree.command(name='unregister', description='Unregister API Key')
+        async def yap(interaction: discord.Interaction):
+            db = sqlite3.connect('yapper.db')
+            cursor = db.cursor()
+            cursor.execute(f'SELECT * FROM users WHERE id = {interaction.user.id}')
+            user_info  = cursor.fetchone()
+
+            if user_info is None:
+                await interaction.response.send_message("You are already not registered.", ephemeral=True)
+            else:
+                cursor.execute(f"DELETE FROM users WHERE id = {interaction.user.id}")
+                db.commit()
+                
+                await interaction.response.send_message("Successfully unregistered.", ephemeral=True)
             
 
     def init_logger(self) -> None:
@@ -198,12 +224,15 @@ class Yapper(discord.Client):
             self.logger.debug("Audio directory not found. Creating new directory")
             os.mkdir('audio')
     
-    def generate_audio(self, prompt: str, voice_id: str, api_key: str) -> Tuple[str, bool]:
+    def generate_audio(self, prompt: str, voice_id: str, stability: float, similarity: float, api_key: str) -> Tuple[str, bool]:
         audio_id = uuid.uuid4().hex
         client = ElevenLabs(api_key=api_key)
+        settings = VoiceSettings(stability=stability, similarity_boost=similarity)
+        voice = Voice(voice_id=voice_id, settings=settings)
+        
         audio = client.generate(
             text=prompt,
-            voice=voice_id,
+            voice=voice,
             model="eleven_multilingual_v2"
         )
 

@@ -48,6 +48,18 @@ class YapModal(discord.ui.Modal, title="Yapper"):
         style=discord.TextStyle.short
     ) 
 
+    similarity = discord.ui.TextInput(
+        label="Similarity boost",
+        placeholder="0.5",
+        style=discord.TextStyle.short
+    )
+
+    stability = discord.ui.TextInput(
+        label="Stability",
+        placeholder="0.5",
+        style=discord.TextStyle.short
+    )
+
     text = discord.ui.TextInput(
         label="Your text",
         placeholder="Input your prompt here",
