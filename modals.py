@@ -42,18 +42,11 @@ class YapModal(discord.ui.Modal, title="Yapper"):
     def __init__(self):
         super().__init__()
 
-
-    options = [
-        discord.SelectOption(label="Rachel"),
-        discord.SelectOption(label="Adam", default=True),
-        discord.SelectOption(label="Alice")
-    ]
-    voice = discord.SelectMenu(
-        options=options,
-        min_values=3,
-        max_values=3,
-        disabled=False
-    )
+    voice = discord.ui.TextInput(
+        label="Voice ID",
+        placeholder="Voice ID here",
+        style=discord.TextStyle.short
+    ) 
 
     text = discord.ui.TextInput(
         label="Your text",
@@ -67,6 +60,3 @@ class YapModal(discord.ui.Modal, title="Yapper"):
     async def on_error(self, interaction: discord.Interaction, exception: Exception):
         print(traceback.format_exc())
         await interaction.response.send_message(f"A problem occured sending your prompt.", ephemeral=True)
-    
-
-    
